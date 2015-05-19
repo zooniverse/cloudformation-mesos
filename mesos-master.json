@@ -52,16 +52,6 @@
       "Description" : "Existing security group that should be granted administrative access to Mesos (e.g., 'sg-123456')",
       "Type" : "AWS::EC2::SecurityGroup::Id"
     },
-    "MarathonDockerImage" : {
-      "Description" : "The Marathon Docker image (format: 'registry:port/repository:version')",
-      "Type" : "String",
-      "Default" : "mesosphere/marathon:v0.8.1"
-    },
-    "MarathonLoggerDockerImage" : {
-      "Description" : "The marathon-logger Docker image (format: 'registry:port/repository:version')",
-      "Type" : "String",
-      "Default" : "thefactory/marathon-logger:latest"
-    },
     "MarathonLoggerEventStore" : {
       "Description" : "The marathon-logger event store connection string",
       "Type" : "String",
@@ -221,9 +211,27 @@
               "/usr/local/bin/configure-mesos-master" : {
                 "content" : { "Fn::Join" : ["\n", [
                   "#!/bin/bash -e",
-                  "echo \"zk://`/usr/local/bin/zk-list-nodes`/{{mesos_cluster_id}}\" > /etc/sv/mesos-master/env/MESOS_ZK",
-                  "echo \"`/usr/bin/ec2metadata --public-hostname`\" > /etc/sv/mesos-master/env/MESOS_HOSTNAME",
-                  "echo \"{{mesos_quorum}}\" > /etc/sv/mesos-master/env/MESOS_QUORUM"
+                  "echo \"zk://`/usr/local/bin/zk-list-nodes`/{{mesos_cluster_id}}\" > /etc/mesos/zk",
+                  "echo \"MESOS_HOSTNAME=`/usr/bin/ec2metadata --public-hostname`\" > /etc/default/mesos-master",
+                  "echo \"MESOS_QUORUM={{mesos_quorum}}\" >> /etc/default/mesos-master"
+                ]]},
+                "context" : {
+                  "mesos_cluster_id": { "Ref": "ClusterId" },
+                  "mesos_quorum": { "Ref": "QuorumSize" }
+                },
+                "mode"    : "000755",
+                "owner"   : "root",
+                "group"   : "root"
+              },
+
+              "/usr/local/bin/configure-marathon" : {
+                "content" : { "Fn::Join" : ["\n", [
+                  "#!/bin/bash -e",
+                  "echo \"MARATHON_MASTER=zk://`/usr/local/bin/zk-list-nodes`/{{mesos_cluster_id}}\" > /etc/default/marathon",
+                  "echo \"MARATHON_ZK=zk://`/usr/local/bin/zk-list-nodes`/{{mesos_cluster_id}}_marathon\" >> /etc/default/marathon",
+                  "echo \"MARATHON_HA=true\" >> /etc/default/marathon",
+                  "echo \"MARATHON_HOSTNAME=`/usr/bin/ec2metadata --public-hostname`\" >> /etc/default/marathon",
+                  "echo \"MARATHON_EVENT_SUBSCRIBER=http_callback\" >> /etc/default/marathon"
                 ]]},
                 "context" : {
                   "mesos_cluster_id": { "Ref": "ClusterId" },
@@ -292,46 +300,15 @@
           "ln -s /mnt/docker /var/lib/docker\n",
           "service docker start\n",
 
-          { "Fn::If" : [
-            "EnableLogstashCondition",
-            { "Fn::Join" : ["", [
-              "echo '", { "Ref" : "LogstashConfig" },"' > /opt/logstash/logstash.conf\n",
-              "runit-service create logstash '/opt/logstash/bin/logstash -f /opt/logstash/logstash.conf'\n",
-              "echo '/root' > /etc/sv/logstash/HOME\n",
-              "runit-service enable logstash\n"
-            ]]},
-            ""
-          ]},
-
           "# Configure, enable, and start mesos-master\n",
           "configure-mesos-master\n",
-          "runit-service enable mesos-master\n",
+          "rm /etc/init/mesos-master.override\n"
+          "service mesos-master start\n",
 
-          "# Set up and start Marathon \n",
-          "export HOME=/root/  # so Docker can find ~/.dockercfg\n",
-          "docker pull ", { "Ref": "MarathonDockerImage" }, "\n",
-          "runit-service create marathon 'docker -r=false run ",
-          "   --net=host",
-          "   -p 8080:8080",
-          "   ", { "Ref": "MarathonDockerImage" },
-          "     --master zk://`zk-list-nodes`/", { "Ref": "ClusterId" },
-          "     --zk zk://`zk-list-nodes`/", { "Ref": "ClusterId" }, "_marathon",
-          "     --event_subscriber http_callback",
-          "     --ha",
-          "     --hostname `ec2metadata --public-hostname`'\n",
-
-          "runit-service enable marathon\n",
-
-          "# Set up and run marathon-logger\n",
-          "docker pull ", { "Ref": "MarathonLoggerDockerImage" }, "\n",
-          "runit-service create marathon-logger 'docker -r=false run ",
-          "   --net=host",
-          "   -p 5000:5000",
-          "   ", { "Ref": "MarathonLoggerDockerImage" },
-          "     --marathon-url http://localhost:8080/",
-          "     --callback-url http://localhost:5000/events",
-          "     --event-store ", { "Ref": "MarathonLoggerEventStore" }, "'\n",
-          "runit-service enable marathon-logger\n",
+          "# Configure, enable, and start marathon",
+          "configure-marathon\n",
+          "rm /etc/init/marathon.override\n"
+          "service marathon start\n",
 
           { "Fn::If" : [
             "EnableConfigScript",

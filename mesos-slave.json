@@ -212,10 +212,10 @@
               "/usr/local/bin/configure-mesos-slave" : {
                 "content" : { "Fn::Join" : ["\n", [
                   "#!/bin/bash -e",
-                  "echo \"zk://`/usr/local/bin/zk-list-nodes`/{{mesos_cluster_id}}\" > /etc/sv/mesos-slave/env/MESOS_MASTER",
-                  "echo \"`/usr/bin/ec2metadata --public-hostname`\" > /etc/sv/mesos-slave/env/MESOS_HOSTNAME",
-                  "echo \"{{executor_registration_timeout}}\" > /etc/sv/mesos-slave/env/MESOS_EXECUTOR_REGISTRATION_TIMEOUT",
-                  "echo \"{{resources}}\" > /etc/sv/mesos-slave/env/MESOS_RESOURCES", ""
+                  "echo \"MESOS_MASTER=zk://`/usr/local/bin/zk-list-nodes`/{{mesos_cluster_id}}\" > /etc/default/mesos-slave",
+                  "echo \"MESOS_HOSTNAME=`/usr/bin/ec2metadata --public-hostname`\" >> /etc/default/mesos-slave",
+                  "echo \"MESOS_EXECUTOR_REGISTRATION_TIMEOUT={{executor_registration_timeout}}\"  >> /etc/default/mesos-slave",
+                  "echo \"MESOS_RESOURCES={{resources}}\" >> /etc/default/mesos-slave"
                 ]]},
                 "context" : {
                   "mesos_cluster_id": { "Ref": "ClusterId" },
@@ -289,20 +289,10 @@
           "mkdir /mnt/mesos\n",
           "ln -s /mnt/mesos /tmp/mesos\n",
 
-          { "Fn::If" : [
-            "EnableLogstashCondition",
-            { "Fn::Join" : ["", [
-              "echo '", { "Ref" : "LogstashConfig" },"' > /opt/logstash/logstash.conf\n",
-              "runit-service create logstash '/opt/logstash/bin/logstash -f /opt/logstash/logstash.conf'\n",
-              "echo '/root' > /etc/sv/logstash/env/HOME\n",
-              "runit-service enable logstash\n"
-            ]]},
-            ""
-          ]},
-
           "# Configure, enable, and start mesos-slave\n",
           "configure-mesos-slave\n",
-          "runit-service enable mesos-slave\n",
+          "rm /etc/init/mesos-slave.override\n"
+          "service mesos-slave start\n",
 
           { "Fn::If" : [
             "EnableConfigScript",
