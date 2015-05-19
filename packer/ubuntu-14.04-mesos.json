@@ -79,6 +79,7 @@
         "echo manual | sudo tee /etc/init/mesos-slave.override",
         "echo manual | sudo tee /etc/init/marathon.override",
         "echo manual | sudo tee /etc/init/chronos.override"
+        "echo manual | sudo tee /etc/init/zookeeper.override"
       ]
     },
     {
