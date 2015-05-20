@@ -211,8 +211,8 @@
                 "content" : { "Fn::Join" : ["\n", [
                   "#!/bin/bash -e",
                   "echo \"zk://`/usr/local/bin/zk-list-nodes`/{{mesos_cluster_id}}\" > /etc/mesos/zk",
-                  "echo \"MESOS_HOSTNAME=`/usr/bin/ec2metadata --public-hostname`\" > /etc/default/mesos-master",
-                  "echo \"MESOS_QUORUM={{mesos_quorum}}\" >> /etc/default/mesos-master"
+                  "echo \"`/usr/bin/ec2metadata --public-hostname`\" > /etc/mesos-master/hostname",
+                  "echo \"{{mesos_quorum}}\" > /etc/mesos-master/quorum"
                 ]]},
                 "context" : {
                   "mesos_cluster_id": { "Ref": "ClusterId" },
@@ -226,11 +226,11 @@
               "/usr/local/bin/configure-marathon" : {
                 "content" : { "Fn::Join" : ["\n", [
                   "#!/bin/bash -e",
-                  "echo \"MARATHON_MASTER=zk://`/usr/local/bin/zk-list-nodes`/{{mesos_cluster_id}}\" > /etc/default/marathon",
-                  "echo \"MARATHON_ZK=zk://`/usr/local/bin/zk-list-nodes`/{{mesos_cluster_id}}_marathon\" >> /etc/default/marathon",
-                  "echo \"MARATHON_HA=true\" >> /etc/default/marathon",
-                  "echo \"MARATHON_HOSTNAME=`/usr/bin/ec2metadata --public-hostname`\" >> /etc/default/marathon",
-                  "echo \"MARATHON_EVENT_SUBSCRIBER=http_callback\" >> /etc/default/marathon"
+                  "echo \"zk://`/usr/local/bin/zk-list-nodes`/{{mesos_cluster_id}}\" > /etc/marathon/conf/master",
+                  "echo \"zk://`/usr/local/bin/zk-list-nodes`/{{mesos_cluster_id}}_marathon\" > /etc/marathon/conf/zk",
+                  "echo \"true\" > /etc/marathon/conf/ha",
+                  "echo \"`/usr/bin/ec2metadata --public-hostname`\" > /etc/marathon/conf/hostname",
+                  "echo \"http_callback\" > /etc/marathon/conf/event_subscriber"
                 ]]},
                 "context" : {
                   "mesos_cluster_id": { "Ref": "ClusterId" },
@@ -300,13 +300,15 @@
           "service docker start\n",
 
           "# Configure, enable, and start mesos-master\n",
+          "mkdir -p /etc/mesos-master\n",
           "configure-mesos-master\n",
           "rm /etc/init/mesos-master.override\n",
           "service mesos-master start\n",
 
-          "# Configure, enable, and start marathon",
+          "# Configure, enable, and start marathon\n",
+          "mkdir -p /etc/marathon/conf\n",
           "configure-marathon\n",
-            "rm /etc/init/marathon.override\n",
+          "rm /etc/init/marathon.override\n",
           "service marathon start\n",
 
           { "Fn::If" : [

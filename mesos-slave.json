@@ -211,10 +211,11 @@
               "/usr/local/bin/configure-mesos-slave" : {
                 "content" : { "Fn::Join" : ["\n", [
                   "#!/bin/bash -e",
-                  "echo \"MESOS_MASTER=zk://`/usr/local/bin/zk-list-nodes`/{{mesos_cluster_id}}\" > /etc/default/mesos-slave",
-                  "echo \"MESOS_HOSTNAME=`/usr/bin/ec2metadata --public-hostname`\" >> /etc/default/mesos-slave",
-                  "echo \"MESOS_EXECUTOR_REGISTRATION_TIMEOUT={{executor_registration_timeout}}\"  >> /etc/default/mesos-slave",
-                  "echo \"MESOS_RESOURCES={{resources}}\" >> /etc/default/mesos-slave"
+                  "echo \"zk://`/usr/local/bin/zk-list-nodes`/{{mesos_cluster_id}}\" > /etc/mesos/zk",
+                  "echo \"zk://`/usr/local/bin/zk-list-nodes`/{{mesos_cluster_id}}\" > /etc/mesos-slave/master",
+                  "echo \"`/usr/bin/ec2metadata --public-hostname`\" > /etc/mesos-slave/hostname",
+                  "echo \"{{executor_registration_timeout}}\"  > /etc/mesos-slave/registration_timeout",
+                  "echo \"{{resources}}\" > /etc/mesos-slave/resources"
                 ]]},
                 "context" : {
                   "mesos_cluster_id": { "Ref": "ClusterId" },
@@ -289,6 +290,7 @@
           "ln -s /mnt/mesos /tmp/mesos\n",
 
           "# Configure, enable, and start mesos-slave\n",
+          "mkdir -p /etc/mesos-slave\n",
           "configure-mesos-slave\n",
           "rm /etc/init/mesos-slave.override\n",
           "service mesos-slave start\n",
