@@ -1,4 +1,3 @@
-
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
 
@@ -302,12 +301,12 @@
 
           "# Configure, enable, and start mesos-master\n",
           "configure-mesos-master\n",
-          "rm /etc/init/mesos-master.override\n"
+          "rm /etc/init/mesos-master.override\n",
           "service mesos-master start\n",
 
           "# Configure, enable, and start marathon",
           "configure-marathon\n",
-          "rm /etc/init/marathon.override\n"
+            "rm /etc/init/marathon.override\n",
           "service marathon start\n",
 
           { "Fn::If" : [

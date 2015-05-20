@@ -1,4 +1,3 @@
-
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
 
@@ -291,7 +290,7 @@
 
           "# Configure, enable, and start mesos-slave\n",
           "configure-mesos-slave\n",
-          "rm /etc/init/mesos-slave.override\n"
+          "rm /etc/init/mesos-slave.override\n",
           "service mesos-slave start\n",
 
           { "Fn::If" : [
