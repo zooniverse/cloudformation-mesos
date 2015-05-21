@@ -212,14 +212,15 @@
                 "content" : { "Fn::Join" : ["\n", [
                   "#!/bin/bash -e",
                   "echo \"zk://`/usr/local/bin/zk-list-nodes`/{{mesos_cluster_id}}\" > /etc/mesos/zk",
-                  "echo \"zk://`/usr/local/bin/zk-list-nodes`/{{mesos_cluster_id}}\" > /etc/mesos-slave/master",
                   "echo \"`/usr/bin/ec2metadata --public-hostname`\" > /etc/mesos-slave/hostname",
-                  "echo \"{{executor_registration_timeout}}\"  > /etc/mesos-slave/registration_timeout",
+                  "echo \"{{executor_registration_timeout}}\"  > /etc/mesos-slave/executor_registration_timeout",
+                  "echo \"{{containerizers}}\"  > /etc/mesos-slave/containerizers",
                   "echo \"{{resources}}\" > /etc/mesos-slave/resources"
                 ]]},
                 "context" : {
                   "mesos_cluster_id": { "Ref": "ClusterId" },
                   "executor_registration_timeout": "5mins",
+                  "containerizers": "mesos,docker",
                   "resources": { "Ref": "MesosResources" }
                 },
                 "mode"    : "000755",
