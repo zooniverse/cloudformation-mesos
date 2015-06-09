@@ -92,6 +92,26 @@
         },
         {
             "type": "shell",
+            "only": ["virtualbox-ovf"],
+            "inline": [
+                "#Install Guest Addons",
+                "sudo mkdir /tmp/virtualbox",
+                "VERSION=$(cat /home/vagrant/.vbox_version)",
+                "sudo mount -o loop /home/vagrant/VBoxGuestAdditions_$VERSION.iso /tmp/virtualbox",
+                "sudo sh /tmp/virtualbox/VBoxLinuxAdditions.run",
+                "sudo umount /tmp/virtualbox",
+                "sudo rmdir /tmp/virtualbox",
+                "sudo rm /home/vagrant/*.iso",
+                "#Install Vagrant ssh keys",
+                "echo mesos | sudo tee /etc/hostname",
+                "sudo mkdir -p /home/vagrant/.ssh",
+                "sudo wget -O /home/vagrant/.ssh/authorized_keys https://raw.githubusercontent.com/mitchellh/vagrant/master/keys/vagrant.pub",
+                "sudo chmod 0600 /home/vagrant/.ssh/authorized_keys",
+                "sudo chown vagrant:vagrant -R /home/vagrant/.ssh/"
+            ]
+        },
+        {
+            "type": "shell",
             "only": ["amazon-ebs"],
             "inline": [
                 "# Install CloudFormation bootstrap tools",
