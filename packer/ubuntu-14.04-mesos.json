@@ -102,8 +102,12 @@
                 "sudo umount /tmp/virtualbox",
                 "sudo rmdir /tmp/virtualbox",
                 "sudo rm /home/vagrant/*.iso",
-                "#Install Vagrant ssh keys",
+
+                "#Set a nicer hostname",
                 "echo mesos | sudo tee /etc/hostname",
+                "sudo sed -i 's/packer-.*$/mesos/' /etc/hosts",
+
+                "#Install Vagrant ssh keys",
                 "sudo mkdir -p /home/vagrant/.ssh",
                 "sudo wget -O /home/vagrant/.ssh/authorized_keys https://raw.githubusercontent.com/mitchellh/vagrant/master/keys/vagrant.pub",
                 "sudo chmod 0600 /home/vagrant/.ssh/authorized_keys",
