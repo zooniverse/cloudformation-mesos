@@ -10,15 +10,15 @@ Vagrant.configure(2) do |config|
 
   config.vm.provision "shell", inline: <<-SHELL
     rm /etc/init/zookeeper.override
-    service zookeeper start
+    service zookeeper restart
 
     rm /etc/init/mesos-master.override
-    service mesos-master start
+    service mesos-master restart
 
     rm /etc/init/mesos-slave.override
-    service mesos-slave start
+    service mesos-slave restart
 
     rm /etc/init/marathon.override
-    service marathon start
+    service marathon restart
   SHELL
 end
