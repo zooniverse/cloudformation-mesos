@@ -12,7 +12,7 @@
         {
             "type": "amazon-ebs",
             "region": "us-east-1",
-            "source_ami": "ami-aa968ac2",
+            "source_ami": "ami-d05e75b8",
             "instance_type": "m3.medium",
             "ssh_username": "ubuntu",
             "ami_name": "{{user `ami_prefix`}}-mesos-{{user `mesos_version`}}-hvm-{{isotime | clean_ami_name}}",
@@ -28,16 +28,67 @@
             }
         },
         {
-            "type": "virtualbox-ovf",
-            "source_path": "packer-virtualbox-iso-1433722713.ovf",
-            "ssh_username": "vagrant",
+            "boot_command": [
+                "<esc><esc><enter><wait>",
+                "/install/vmlinuz noapic preseed/url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg <wait>",
+                "debian-installer=en_US auto locale=en_US kbd-chooser/method=us <wait>",
+                "hostname={{ .Name }} <wait>",
+                "fb=false debconf/frontend=noninteractive <wait>",
+                "keyboard-configuration/modelcode=SKIP keyboard-configuration/layout=USA keyboard-configuration/variant=USA console-setup/ask_detect=false <wait>",
+                "initrd=/install/initrd.gz -- <enter><wait>"
+            ],
+            "boot_wait": "4s",
+            "guest_additions_path": "VBoxGuestAdditions_{{.Version}}.iso",
+            "guest_os_type": "Ubuntu_64",
+            "headless": false,
+            "http_directory": "http",
+            "iso_checksum": "3bfa6eac84d527380d0cc52db9092cde127f161e",
+            "iso_checksum_type": "sha1",
+            "iso_url": "http://releases.ubuntu.com/14.04/ubuntu-14.04.2-server-amd64.iso",
+            "shutdown_command": "echo 'shutdown -P now' > shutdown.sh; echo 'vagrant'|sudo -S sh 'shutdown.sh'",
             "ssh_password": "vagrant",
-            "ssh_wait_timeout": "30s",
-            "shutdown_command": "echo 'packer' | sudo -S shutdown -P now"
+            "ssh_port": 22,
+            "ssh_username": "vagrant",
+            "ssh_wait_timeout": "10000s",
+            "type": "virtualbox-iso",
+            "vboxmanage": [
+                [
+                    "modifyvm",
+                    "{{.Name}}",
+                    "--memory",
+                    "1048"
+                ],
+                [
+                    "modifyvm",
+                    "{{.Name}}",
+                    "--cpus",
+                    "1"
+                ]
+            ],
+            "virtualbox_version_file": ".vbox_version"
         }
     ],
 
     "provisioners": [
+        {
+            "only": ["virtualbox-iso"],
+            "override": {
+                "virtualbox-iso": {
+                    "execute_command": "echo 'vagrant' | sudo -S sh '{{ .Path }}'"
+                }
+            },
+            "scripts": [
+                "scripts/ubuntu_ovf_setup_1.sh"
+            ],
+            "type": "shell"
+        },
+        {
+            "only": ["virtualbox-iso"],
+            "scripts": [
+                "scripts/ubuntu_ovf_setup_2.sh"
+            ],
+            "type": "shell"
+        },
         {
             "type": "file",
             "source": "include/",
@@ -87,23 +138,17 @@
                 "echo manual | sudo tee /etc/init/mesos-slave.override",
                 "echo manual | sudo tee /etc/init/marathon.override",
                 "echo manual | sudo tee /etc/init/chronos.override",
-                "echo manual | sudo tee /etc/init/zookeeper.override"
+                "echo manual | sudo tee /etc/init/zookeeper.override",
+
+                "# Clear Apt-Cache",
+                "sudo apt-get clean",
+                "sudo rm -rf /var/lib/apt/lists/* /var/tmp/*"
             ]
         },
         {
             "type": "shell",
-            "only": ["virtualbox-ovf"],
+            "only": ["virtualbox-iso"],
             "inline": [
-                "#Install Guest Addons",
-                "sudo mkdir /tmp/virtualbox",
-                "sudo apt-get install -y gcc build-essential dkms linux-headers-`uname -r`",
-                "VERSION=$(cat /home/vagrant/.vbox_version)",
-                "sudo mount -o loop /home/vagrant/VBoxGuestAdditions.iso /tmp/virtualbox",
-                "sudo sh /tmp/virtualbox/VBoxLinuxAdditions.run",
-                "sudo umount /tmp/virtualbox",
-                "sudo rmdir /tmp/virtualbox",
-                "sudo rm /home/vagrant/*.iso",
-
                 "#Set a nicer hostname",
                 "echo mesos | sudo tee /etc/hostname",
                 "sudo sed -i 's/packer-.*$/mesos/' /etc/hosts",
