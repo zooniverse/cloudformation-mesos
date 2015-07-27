@@ -5,7 +5,9 @@
         "marathon_version": "0.8.1",
         "chronos_version": "2.3.3",
         "cfn_tools_url": "https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz",
-        "ami_prefix": "zooniverse"
+        "ami_prefix": "{{env `ATLAS_USERNAME`}}",
+        "atlas_username": "{{env `ATLAS_USERNAME`}}",
+        "atlas_name": "{{env `ATLAS_NAME`}}"
     },
 
     "builders": [
@@ -174,5 +176,30 @@
         }
     ],
 
-    "post-processors": ["vagrant"]
+    "post-processors": [
+        [{
+            "type": "vagrant",
+            "keep_input_artifact": false
+        },
+         {
+             "type": "atlas",
+             "only": ["amazon-ebs"],
+             "artifact": "{{user `atlas_username`}}/{{user `atlas_name`}}",
+             "artifact_type": "vagrant.box",
+             "metadata": {
+                 "provider": "aws",
+                 "version": "0.0.2"
+             }
+         },
+         {
+             "type": "atlas",
+             "only": ["virtualbox-iso"],
+             "artifact": "{{user `atlas_username`}}/{{user `atlas_name`}}",
+             "artifact_type": "vagrant.box",
+             "metadata": {
+                 "provider": "virtualbox",
+                 "version": "0.0.2"
+             }
+         }]
+    ]
 }
